@@ -1,0 +1,1024 @@
+{
+  "datasets": [
+    {
+      "name": "762e0db4",
+      "displayName": "atrasos_por_aeroporto",
+      "queryLines": [
+        "-- P1 — Quais rotas e aeroportos concentram os maiores atrasos de partida no Brasil?\n",
+        "-- Filtro de período via parâmetros :data_inicio e :data_fim (Global Filters).\r\n",
+        "-- Recorte: aeroportos de origem no Brasil, com volume relevante (>= 5.000 voos).\r\n",
+        "SELECT\r\n",
+        "  nome_aeroporto_origem,\r\n",
+        "  municipio_origem,\r\n",
+        "  uf_origem,\r\n",
+        "  COUNT(*)                                                                   AS voos,\r\n",
+        "  ROUND(AVG(atraso_partida_min), 2)                                          AS atraso_medio_min,\r\n",
+        "  ROUND(100.0 * try_divide(SUM(CASE WHEN partida_pontual = false THEN 1 ELSE 0 END),\r\n",
+        "                           SUM(CASE WHEN partida_pontual IS NOT NULL THEN 1 ELSE 0 END)), 2) AS pct_atrasados\r\n",
+        "FROM voebem.gold.obt_voos\r\n",
+        "WHERE pais_origem = 'Brasil'\n",
+        "  AND (:data_inicio IS NULL OR partida_prevista_data >= :data_inicio)\n",
+        "  AND (:data_fim IS NULL OR partida_prevista_data <= :data_fim)\r\n",
+        "GROUP BY 1, 2, 3\r\n",
+        "HAVING COUNT(*) >= 5000\r\n",
+        "ORDER BY pct_atrasados DESC\r\n",
+        "LIMIT 10;"
+      ],
+      "parameters": [
+        {
+          "displayName": "Data de início",
+          "keyword": "data_inicio",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Data de fim",
+          "keyword": "data_fim",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2026-08-01"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "f46c5894",
+      "displayName": "atraso_por_hora",
+      "queryLines": [
+        "-- P2 — como o atraso de partida evolui ao longo do dia?(efeito cascata).\n",
+        "-- Filtro de período via parâmetros :data_inicio e :data_fim (Global Filters).\r\n",
+        "SELECT\r\n",
+        "  hora_partida_prevista AS hora,\r\n",
+        "  COUNT(*) AS voos,\r\n",
+        "  ROUND(AVG(atraso_partida_min), 2) AS atraso_medio_min,\r\n",
+        "  ROUND(\r\n",
+        "    100.0 * try_divide(\r\n",
+        "        SUM(CASE WHEN partida_pontual = false THEN 1 ELSE 0 END),\r\n",
+        "        SUM(CASE WHEN partida_pontual IS NOT NULL THEN 1 ELSE 0 END)), 2) AS pct_atrasados\r\n",
+        "FROM voebem.gold.obt_voos\r\n",
+        "WHERE hora_partida_prevista IS NOT NULL\n",
+        "  AND (:data_inicio IS NULL OR partida_prevista_data >= :data_inicio)\n",
+        "  AND (:data_fim IS NULL OR partida_prevista_data <= :data_fim)\r\n",
+        "GROUP BY 1\r\n",
+        "ORDER BY 1"
+      ],
+      "parameters": [
+        {
+          "displayName": "Data de início",
+          "keyword": "data_inicio",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Data de fim",
+          "keyword": "data_fim",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2026-08-01"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "71d80f89",
+      "displayName": "recuperacao_por_companhia",
+      "queryLines": [
+        "SELECT\r\n",
+        "  nome_companhia,\r\n",
+        "  COUNT(*)                                                                   AS voos,\r\n",
+        "  ROUND(AVG(atraso_partida_min), 2)                                          AS atraso_saida_min,\r\n",
+        "  ROUND(AVG(atraso_chegada_min), 2)                                          AS atraso_chegada_min,\r\n",
+        "  ROUND(AVG(minutos_recuperados), 2)                                         AS recuperados_medio_min\r\n",
+        "FROM voebem.gold.obt_voos\r\n",
+        "WHERE minutos_recuperados IS NOT NULL\n",
+        "  AND (:data_inicio IS NULL OR partida_prevista_data >= :data_inicio)\n",
+        "  AND (:data_fim IS NULL OR partida_prevista_data <= :data_fim)\n",
+        "-- Filtro de companhia aérea via column-based filter (Global Filters)\r\n",
+        "GROUP BY 1\r\n",
+        "HAVING COUNT(*) >= 10000\r\n",
+        "ORDER BY recuperados_medio_min DESC;\r\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Data de início",
+          "keyword": "data_inicio",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Data de fim",
+          "keyword": "data_fim",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2026-08-01"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9073238e",
+      "displayName": "pontualidade_por_companhia",
+      "queryLines": [
+        "SELECT\r\n",
+        "  nome_companhia,\r\n",
+        "  COUNT(*)                                                                   AS voos,\r\n",
+        "  ROUND(100.0 * SUM(CASE WHEN voo_cancelado THEN 1 ELSE 0 END) / COUNT(*), 2) AS pct_cancelados,\r\n",
+        "  ROUND(100.0 * try_divide(SUM(CASE WHEN partida_pontual = true THEN 1 ELSE 0 END),\r\n",
+        "                           SUM(CASE WHEN partida_pontual IS NOT NULL THEN 1 ELSE 0 END)), \r\n",
+        "2) AS pct_pontuais,\r\n",
+        "  ROUND(AVG(atraso_partida_min), 2)                                          AS atraso_medio_min\r\n",
+        "FROM voebem.gold.obt_voos\n",
+        "WHERE (:data_inicio IS NULL OR partida_prevista_data >= :data_inicio)\n",
+        "  AND (:data_fim IS NULL OR partida_prevista_data <= :data_fim)\n",
+        "-- Filtro de companhia aérea via column-based filter (Global Filters)\n",
+        "GROUP BY 1\r\n",
+        "HAVING COUNT(*) >= 10000\r\n",
+        "ORDER BY pct_pontuais DESC;\r\n"
+      ],
+      "parameters": [
+        {
+          "displayName": "Data de início",
+          "keyword": "data_inicio",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2025-08-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "displayName": "Data de fim",
+          "keyword": "data_fim",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                {
+                  "value": "2026-08-01"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "total_voos",
+      "displayName": "Total_de_Voos",
+      "queryLines": [
+        "SELECT\n",
+        "  COUNT(*) AS total_voos\n",
+        "FROM\n",
+        "  voebem.gold.obt_voos\n",
+        "WHERE\n",
+        "  pais_origem = 'Brasil'"
+      ]
+    },
+    {
+      "name": "pontualidade_geral",
+      "displayName": "Pontualidade_Geral",
+      "queryLines": [
+        "SELECT\n",
+        "  ROUND(\n",
+        "    100.0\n",
+        "      * try_divide(\n",
+        "        SUM(\n",
+        "          CASE\n",
+        "            WHEN partida_pontual = true THEN 1\n",
+        "            ELSE 0\n",
+        "          END\n",
+        "        ),\n",
+        "        SUM(\n",
+        "          CASE\n",
+        "            WHEN partida_pontual IS NOT NULL THEN 1\n",
+        "            ELSE 0\n",
+        "          END\n",
+        "        )\n",
+        "      ),\n",
+        "    1\n",
+        "  ) AS pontualidade_media\n",
+        "FROM\n",
+        "  voebem.gold.obt_voos\n",
+        "WHERE\n",
+        "  pais_origem = 'Brasil'"
+      ]
+    },
+    {
+      "name": "filter_companhia",
+      "displayName": "Filtro_Companhia",
+      "queryLines": [
+        "SELECT DISTINCT\n",
+        "  nome_companhia\n",
+        "FROM\n",
+        "  voebem.gold.obt_voos\n",
+        "WHERE\n",
+        "  nome_companhia IS NOT NULL\n",
+        "ORDER BY\n",
+        "  nome_companhia"
+      ]
+    },
+    {
+      "name": "filter_periodo",
+      "displayName": "Filtro Período",
+      "queryLines": [
+        "SELECT\n",
+        "  MIN(partida_prevista_data) AS partida_prevista_data\n",
+        "FROM\n",
+        "  voebem.gold.obt_voos\n",
+        "WHERE\n",
+        "  pais_origem = 'Brasil'\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  MAX(partida_prevista_data) AS partida_prevista_data\n",
+        "FROM\n",
+        "  voebem.gold.obt_voos\n",
+        "WHERE\n",
+        "  pais_origem = 'Brasil'"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "bd2477d6",
+      "displayName": "Análise de Atrasos ANAC",
+      "layout": [
+        {
+          "widget": {
+            "name": "844ffd33",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "762e0db4",
+                  "fields": [
+                    {
+                      "name": "voos",
+                      "expression": "`voos`"
+                    },
+                    {
+                      "name": "pct_atrasados",
+                      "expression": "`pct_atrasados`"
+                    },
+                    {
+                      "name": "nome_aeroporto_origem",
+                      "expression": "`nome_aeroporto_origem`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "📍 Piores aeroportos por % de voos atrasados",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "colors": [
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 1
+                  }
+                ]
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "pct_atrasados",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }}%",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "nome_aeroporto_origem",
+                  "axis": {
+                    "hideTitle": true,
+                    "labelAngle": 0
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                },
+                "extra": [
+                  {
+                    "fieldName": "voos",
+                    "displayName": "Voos"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "atraso_por_hora_line",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "f46c5894",
+                  "fields": [
+                    {
+                      "name": "voos",
+                      "expression": "`voos`"
+                    },
+                    {
+                      "name": "pct_atrasados",
+                      "expression": "`pct_atrasados`"
+                    },
+                    {
+                      "name": "hora",
+                      "expression": "`hora`"
+                    },
+                    {
+                      "name": "atraso_medio_min",
+                      "expression": "`atraso_medio_min`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "🕐 Atraso médio de partida ao longo do dia",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "marker": {
+                  "shape": "circle"
+                }
+              },
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "hora",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @formatted }}h",
+                  "displayName": "Hora do dia",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "atraso_medio_min",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    }
+                  },
+                  "displayName": "Atraso médio (min)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "voos",
+                    "displayName": "Voos"
+                  },
+                  {
+                    "fieldName": "pct_atrasados",
+                    "format": {
+                      "type": "number-plain",
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "type": "exact",
+                        "places": 2
+                      }
+                    },
+                    "formatTemplate": "{{ @formatted }}%",
+                    "displayName": "% atrasados"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 5,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "pontualidade_companhia_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "9073238e",
+                  "fields": [
+                    {
+                      "name": "pct_cancelados",
+                      "expression": "`pct_cancelados`"
+                    },
+                    {
+                      "name": "atraso_medio_min",
+                      "expression": "`atraso_medio_min`"
+                    },
+                    {
+                      "name": "pct_pontuais",
+                      "expression": "`pct_pontuais`"
+                    },
+                    {
+                      "name": "nome_companhia",
+                      "expression": "`nome_companhia`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "✈️ Pontualidade por companhia aérea",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "pct_pontuais",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }}%",
+                  "displayName": "% voos pontuais",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "nome_companhia",
+                  "axis": {
+                    "hideTitle": true,
+                    "labelAngle": 0
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                },
+                "extra": [
+                  {
+                    "fieldName": "pct_cancelados",
+                    "format": {
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 2,
+                        "type": "exact"
+                      },
+                      "type": "number-plain"
+                    },
+                    "formatTemplate": "{{ @formatted }}%",
+                    "displayName": "% cancelados"
+                  },
+                  {
+                    "fieldName": "atraso_medio_min",
+                    "format": {
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      },
+                      "type": "number-plain"
+                    },
+                    "displayName": "Atraso médio (min)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "recuperacao_companhia_bar",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "71d80f89",
+                  "fields": [
+                    {
+                      "name": "atraso_saida_min",
+                      "expression": "`atraso_saida_min`"
+                    },
+                    {
+                      "name": "atraso_chegada_min",
+                      "expression": "`atraso_chegada_min`"
+                    },
+                    {
+                      "name": "recuperados_medio_min",
+                      "expression": "`recuperados_medio_min`"
+                    },
+                    {
+                      "name": "nome_companhia",
+                      "expression": "`nome_companhia`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "↗️ Minutos de atraso recuperados em voo, por companhia"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "recuperados_medio_min",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "Minutos recuperados",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "nome_companhia",
+                  "axis": {
+                    "hideTitle": true,
+                    "labelAngle": 0
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                },
+                "extra": [
+                  {
+                    "fieldName": "atraso_saida_min",
+                    "format": {
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      },
+                      "type": "number-plain"
+                    },
+                    "displayName": "Atraso saída (min)"
+                  },
+                  {
+                    "fieldName": "atraso_chegada_min",
+                    "format": {
+                      "abbreviation": "none",
+                      "decimalPlaces": {
+                        "places": 1,
+                        "type": "exact"
+                      },
+                      "type": "number-plain"
+                    },
+                    "displayName": "Atraso chegada (min)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 12,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "header_text",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# ✈️voebem — Performance Operacional Aérea\n",
+                "\n",
+                "Painel de análise de pontualidade e atrasos de voos no Brasil com base em dados da ANAC. Identifica aeroportos e horários de maior atraso, compara a pontualidade entre companhias aéreas e mede a recuperação de tempo em voo."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_total_voos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "total_voos",
+                  "fields": [
+                    {
+                      "name": "total_voos",
+                      "expression": "`total_voos`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Total de Voos",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "total_voos",
+                  "format": {
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "places": 0,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "displayName": "Total de Voos"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "counter_pontualidade",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "pontualidade_geral",
+                  "fields": [
+                    {
+                      "name": "pontualidade_media",
+                      "expression": "`pontualidade_media`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Pontualidade Geral",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "style": {
+                "fontColor": {
+                  "light": "#111C17"
+                }
+              },
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "pontualidade_media",
+                  "format": {
+                    "abbreviation": "none",
+                    "decimalPlaces": {
+                      "places": 1,
+                      "type": "exact"
+                    },
+                    "type": "number-plain"
+                  },
+                  "formatTemplate": "{{ @formatted }}%",
+                  "displayName": "Pontualidade Geral"
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "periodo_text",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**Período de Análise**\n",
+                "\n",
+                "Agosto/2025 — Julho/2026"
+              ]
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 2,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "nota_tap",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<small>TAP opera voos majoritariamente internacionais, com mais margem de horário programada, o que favorece a recuperação de atrasos em voo.</small>"
+              ]
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 19,
+            "width": 6,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "global_filters",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "filtro_periodo",
+            "queries": [
+              {
+                "name": "dashboards/01f1b3c060cb1b8bacfb7095ab467ab8/datasets/01f1b3ca896512e896edd896d5092315_partida_prevista_data",
+                "query": {
+                  "datasetName": "filter_periodo",
+                  "fields": [
+                    {
+                      "name": "partida_prevista_data",
+                      "expression": "`partida_prevista_data`"
+                    },
+                    {
+                      "name": "partida_prevista_data_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Período de partida"
+              },
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "partida_prevista_data",
+                    "queryName": "dashboards/01f1b3c060cb1b8bacfb7095ab467ab8/datasets/01f1b3ca896512e896edd896d5092315_partida_prevista_data"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filtro_companhia",
+            "queries": [
+              {
+                "name": "dashboards/01f1b3c060cb1b8bacfb7095ab467ab8/datasets/01f1b3ca88e51128948cfb63eb9fcfd6_nome_companhia",
+                "query": {
+                  "datasetName": "filter_companhia",
+                  "fields": [
+                    {
+                      "name": "nome_companhia",
+                      "expression": "`nome_companhia`"
+                    },
+                    {
+                      "name": "nome_companhia_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true,
+                "title": "Companhia aérea"
+              },
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "nome_companhia",
+                    "queryName": "dashboards/01f1b3c060cb1b8bacfb7095ab467ab8/datasets/01f1b3ca88e51128948cfb63eb9fcfd6_nome_companhia"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F5F7FA",
+        "dark": "#1F272D"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#11171C"
+      },
+      "fontColor": {
+        "light": "#11171C",
+        "dark": "#E8ECF0"
+      },
+      "selectionColor": {
+        "light": "#2272B4",
+        "dark": "#8ACAFF"
+      },
+      "visualizationColors": [
+        "#0F4C81",
+        "#2F80ED",
+        "#00A896",
+        "#B8D0E5"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "fontFamily": "Inter",
+      "widgetPadding": 12,
+      "widgetMargin": 8,
+      "widgetCornerRadius": 8,
+      "widgetShadow": 5
+    },
+    "applyModeEnabled": false
+  }
+}
