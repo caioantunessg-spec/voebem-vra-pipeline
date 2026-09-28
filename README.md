@@ -17,7 +17,7 @@ Desenvolvido durante a **Imersão Engenharia de Dados com IA 2026**, da Alura.
 | P1 | Quais aeroportos concentram os maiores atrasos de partida no Brasil? | Piores aeroportos por % de voos atrasados |
 | P2 | Como o atraso evolui ao longo do dia (efeito cascata)? | Atraso médio de partida ao longo do dia |
 | P3 | Quais companhias têm melhor pontualidade x cancelamento? | Pontualidade por companhia aérea |
-| P5 | Quanto atraso as companhias recuperam em voo? | Minutos de atraso recuperados em voo, por companhia |
+| P4 | Quanto atraso as companhias recuperam em voo? | Minutos de atraso recuperados em voo, por companhia |
 
 ## Principais achados
 
